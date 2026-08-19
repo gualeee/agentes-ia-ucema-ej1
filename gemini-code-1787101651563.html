@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Excel</title>
+    <!-- Importamos la librería SheetJS para leer Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+            color: #333;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { margin-top: 0; color: #1d4ed8; }
+        .subtitle { margin-bottom: 20px; font-size: 16px; }
+        input[type="file"] { margin-bottom: 20px; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .stat-card {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-card h3 { margin: 0; font-size: 16px; color: #1e40af; word-break: break-all; }
+        /* Hicimos el número más grande (28px) para que destaque más al estar solo */
+        .stat-card p { margin: 10px 0 0 0; font-size: 28px; font-weight: bold; color: #1d4ed8; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>📊 Dashboard de Excel</h1>
+        <p class="subtitle">Seleccioná tu archivo Excel para ver la cantidad de <strong>filas</strong> por hoja.</p>
+        
+        <input type="file" id="archivo-excel" accept=".xlsx, .xls">
+        
+        <div id="resultados" class="grid">
+            <!-- Acá van a aparecer los resultados -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('archivo-excel').addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            
+            reader.onload = function(e) {
+                var data = new Uint8Array(e.target.result);
+                // Leemos el archivo excel
+                var workbook = XLSX.read(data, {type: 'array'});
+                
+                var resultadosDiv = document.getElementById('resultados');
+                resultadosDiv.innerHTML = ''; // Limpiamos resultados anteriores
+
+                // Recorremos cada hoja del archivo
+                workbook.SheetNames.forEach(function(sheetName, index) {
+                    
+                    // Verificamos si la hoja está oculta en el Excel
+                    var isHidden = false;
+                    if (workbook.Workbook && workbook.Workbook.Sheets && workbook.Workbook.Sheets[index]) {
+                        if (workbook.Workbook.Sheets[index].Hidden) {
+                            isHidden = true; // Si tiene la propiedad Hidden, la marcamos
+                        }
+                    }
+                    
+                    // Si está oculta, cortamos acá y pasamos a la siguiente hoja
+                    if (isHidden) return;
+
+                    var sheet = workbook.Sheets[sheetName];
+                    var rowCount = 0;
+
+                    // Calculamos la cantidad de filas mirando el rango de la hoja
+                    if (sheet['!ref']) {
+                        var range = XLSX.utils.decode_range(sheet['!ref']);
+                        rowCount = range.e.r - range.s.r + 1;
+                    }
+
+                    // Formateamos el número para que use punto como separador de miles
+                    var rowCountFormateado = rowCount.toLocaleString('es-AR');
+
+                    // Creamos la tarjetita para mostrar en pantalla (ahora sin la palabra "filas")
+                    var card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.innerHTML = '<h3>' + sheetName + '</h3><p>' + rowCountFormateado + '</p>';
+                    
+                    resultadosDiv.appendChild(card);
+                });
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html>
